@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Users Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
+    h1 { text-align: center; color: #333; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; background: #fff; }
+    th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+    th { background: #007BFF; color: white; }
+    input, button { padding: 8px; margin: 5px; }
+    button { cursor: pointer; background: #007BFF; color: white; border: none; border-radius: 4px; }
+    button:hover { background: #0056b3; }
+    .form-section { background: #fff; padding: 15px; margin-bottom: 20px; border-radius: 6px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+<h1>Users Dashboard</h1>
+
+<div class="form-section" id="addForm">
+  <h2>Add User</h2>
+  <input type="text" id="name" placeholder="Name">
+  <input type="number" id="age" placeholder="Age">
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Password">
+  <button onclick="addUser()">Add User</button>
+</div>
+
+<div class="form-section hidden" id="editForm">
+  <h2>Edit User</h2>
+  <input type="hidden" id="editId">
+  <input type="text" id="editName" placeholder="Name">
+  <input type="number" id="editAge" placeholder="Age">
+  <input type="email" id="editEmail" placeholder="Email">
+  <button onclick="updateUser()">Update User</button>
+  <button onclick="cancelEdit()">Cancel</button>
+</div>
+
+<div class="form-section">
+  <h2>Users List</h2>
+  <table id="usersTable">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Age</th>
+        <th>Email</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Users will be appended here -->
+    </tbody>
+  </table>
+  <button onclick="getUsers()">Refresh List</button>
+</div>
+
+<script>
+  const API_BASE = "http://127.0.0.1:8000";
+
+  async function getUsers() {
+    const res = await fetch(`${API_BASE}/users/`);
+    const users = await res.json();
+    const tbody = document.getElementById('usersTable').querySelector('tbody');
+    tbody.innerHTML = '';
+    users.forEach(user => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${user.id}</td>
+        <td>${user.name}</td>
+        <td>${user.age}</td>
+        <td>${user.email}</td>
+        <td>
+          <button onclick="showEditForm(${user.id}, '${user.name}', ${user.age}, '${user.email}')">Edit</button>
+          <button onclick="deleteUser(${user.id})">Delete</button>
+        </td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+
+  async function addUser() {
+    const name = document.getElementById('name').value;
+    const age = document.getElementById('age').value;
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+
+    const res = await fetch(`${API_BASE}/users/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, age: Number(age), email, password })
+    });
+
+    if (res.ok) {
+      alert('User added successfully!');
+      document.getElementById('name').value = '';
+      document.getElementById('age').value = '';
+      document.getElementById('email').value = '';
+      document.getElementById('password').value = '';
+      getUsers();
+    } else {
+      const err = await res.json();
+      alert('Error: ' + err.detail);
+    }
+  }
+
+  function showEditForm(id, name, age, email) {
+    document.getElementById('addForm').classList.add('hidden');
+    document.getElementById('editForm').classList.remove('hidden');
+    document.getElementById('editId').value = id;
+    document.getElementById('editName').value = name;
+    document.getElementById('editAge').value = age;
+    document.getElementById('editEmail').value = email;
+  }
+
+  function cancelEdit() {
+    document.getElementById('addForm').classList.remove('hidden');
+    document.getElementById('editForm').classList.add('hidden');
+  }
+
+  async function updateUser() {
+    const id = document.getElementById('editId').value;
+    const name = document.getElementById('editName').value;
+    const age = document.getElementById('editAge').value;
+    const email = document.getElementById('editEmail').value;
+
+    const res = await fetch(`${API_BASE}/users/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, age: Number(age), email })
+    });
+
+    if (res.ok) {
+      alert('User updated successfully!');
+      cancelEdit();
+      getUsers();
+    } else {
+      const err = await res.json();
+      alert('Error: ' + err.detail);
+    }
+  }
+
+  async function deleteUser(id) {
+    const res = await fetch(`${API_BASE}/users/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      alert('User deleted!');
+      getUsers();
+    } else {
+      const err = await res.json();
+      alert('Error: ' + err.detail);
+    }
+  }
+
+  // Load users on page load
+  getUsers();
+</script>
+
+</body>
+</html>
